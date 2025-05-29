@@ -84,6 +84,17 @@ The server is designed to be used as an MCP server that provides Google Drive op
 
 CRITICAL: When making changes to project setup, authentication, or core functionality, ALWAYS update the README.md to keep it in sync with CLAUDE.md and the actual code implementation. Both files should contain consistent information about setup requirements, authentication methods, and usage instructions.
 
+## Development Workflow
+
+IMPORTANT: NEVER commit directly to the main branch. Always use the following workflow:
+1. Create a new feature branch from main: `git checkout -b feature/description`
+2. Make your changes and commit them to the feature branch
+3. Push the feature branch to remote: `git push -u origin feature/description`
+4. Create a Pull Request to merge into main
+5. After PR is merged, delete the feature branch and pull latest main
+
+This ensures all changes are reviewed and CI passes before merging to main.
+
 ## Code Review
 
 Please enforce the following during code review:
