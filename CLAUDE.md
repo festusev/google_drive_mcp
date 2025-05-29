@@ -10,14 +10,16 @@ This is a Python project called "google-drive-mcp" (version 0.1.0) that implemen
 
 This project uses uv for Python package management. Standard development commands:
 
-- **Install dependencies**: `uv sync`
-- **Install test dependencies**: `uv sync --all-extras`
+- **Install dependencies**: `uv sync --all-extras`
 - **Install in development mode**: `uv pip install -e .`
 - **Run the server**: `python -m google_drive_mcp.server`
 - **Run tests**: `uv run pytest`
 - **Run tests with coverage**: `uv run pytest --cov=google_drive_mcp --cov-report=html`
-- **Type checking**: `uv run mypy .` (once mypy is configured)
-- **Linting**: `uv run ruff check .` (once ruff is added)
+- **Type checking**: `uv run mypy google_drive_mcp`
+- **Linting**: `uv run ruff check .`
+- **Formatting**: `uv run ruff format .`
+- **Install pre-commit hooks**: `uv run pre-commit install`
+- **Run pre-commit on all files**: `uv run pre-commit run --all-files`
 
 ## Architecture
 
@@ -51,7 +53,7 @@ The project implements a FastMCP server with the following components:
 The project includes comprehensive pytest test suite with:
 
 - **Unit tests** for authentication (`test_auth.py`)
-- **Function tests** for all MCP tools (`test_server.py`) 
+- **Function tests** for all MCP tools (`test_server.py`)
 - **Integration tests** for MCP server functionality (`test_integration.py`)
 - **Mocked Google APIs** to avoid requiring real credentials during testing
 - **Coverage reporting** with pytest-cov
