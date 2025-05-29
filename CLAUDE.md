@@ -44,9 +44,10 @@ The project implements a FastMCP server with the following components:
 
 ## Setup Requirements
 
-1. **Google API Credentials**: Obtain `credentials.json` from Google Cloud Console
+1. **Service Account Key**: Obtain `service-account-key.json` from Google Cloud Console
 2. **API Scopes**: Requires Google Drive and Google Docs API access
-3. **Authentication**: First run will trigger OAuth flow and create `token.json`
+3. **Authentication**: Uses service account authentication (no OAuth flow required)
+4. **File Access**: Service account can only access files explicitly shared with the service account email
 
 ## Testing
 
@@ -78,3 +79,16 @@ uv run pytest tests/test_server.py -v
 ## Usage Patterns
 
 The server is designed to be used as an MCP server that provides Google Drive operations to MCP clients. All tools return formatted text responses with proper pagination tokens and error messages.
+
+## Documentation Maintenance
+
+CRITICAL: When making changes to project setup, authentication, or core functionality, ALWAYS update the README.md to keep it in sync with CLAUDE.md and the actual code implementation. Both files should contain consistent information about setup requirements, authentication methods, and usage instructions.
+
+## Code Review
+
+Please enforce the following during code review:
+- All tests are passing
+- New tests have been added, or old ones have been updated, if warranted
+- The documentation has been updated if need be
+- A high standard for readable code is maintained
+- A high standard for well-typed code is maintained
