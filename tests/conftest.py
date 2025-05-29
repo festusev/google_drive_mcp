@@ -1,7 +1,9 @@
 """Test configuration and fixtures."""
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, MagicMock
+
 from google_drive_mcp.auth import GoogleDriveClient
 
 
@@ -20,35 +22,35 @@ def mock_credentials():
 def mock_drive_service():
     """Mock Google Drive service."""
     service = Mock()
-    
+
     # Mock files().list() chain
     files_mock = Mock()
     list_mock = Mock()
     execute_mock = Mock()
-    
+
     execute_mock.return_value = {
-        'files': [
+        "files": [
             {
-                'id': 'file_1',
-                'name': 'Test Document 1',
-                'mimeType': 'application/vnd.google-apps.document',
-                'modifiedTime': '2023-01-01T00:00:00.000Z',
-                'size': '1024'
+                "id": "file_1",
+                "name": "Test Document 1",
+                "mimeType": "application/vnd.google-apps.document",
+                "modifiedTime": "2023-01-01T00:00:00.000Z",
+                "size": "1024",
             },
             {
-                'id': 'file_2', 
-                'name': 'Test Document 2',
-                'mimeType': 'application/vnd.google-apps.document',
-                'modifiedTime': '2023-01-02T00:00:00.000Z'
-            }
+                "id": "file_2",
+                "name": "Test Document 2",
+                "mimeType": "application/vnd.google-apps.document",
+                "modifiedTime": "2023-01-02T00:00:00.000Z",
+            },
         ],
-        'nextPageToken': 'next_page_token'
+        "nextPageToken": "next_page_token",
     }
-    
+
     list_mock.execute = execute_mock
     files_mock.list.return_value = list_mock
     service.files.return_value = files_mock
-    
+
     return service
 
 
@@ -56,68 +58,62 @@ def mock_drive_service():
 def mock_docs_service():
     """Mock Google Docs service."""
     service = Mock()
-    
+
     # Mock documents().get() chain
     docs_mock = Mock()
     get_mock = Mock()
     execute_mock = Mock()
-    
+
     execute_mock.return_value = {
-        'title': 'Test Document',
-        'body': {
-            'content': [
+        "title": "Test Document",
+        "body": {
+            "content": [
                 {
-                    'paragraph': {
-                        'elements': [
+                    "paragraph": {
+                        "elements": [
                             {
-                                'textRun': {
-                                    'content': 'Hello, World! This is a test document.'
+                                "textRun": {
+                                    "content": "Hello, World! This is a test document."
                                 }
                             }
                         ]
                     }
                 },
-                {
-                    'endIndex': 100
-                }
+                {"endIndex": 100},
             ]
         },
-        'tabs': [
+        "tabs": [
             {
-                'tabId': 'tab_1',
-                'documentTab': {
-                    'body': {
-                        'content': [
+                "tabId": "tab_1",
+                "documentTab": {
+                    "body": {
+                        "content": [
                             {
-                                'paragraph': {
-                                    'elements': [
-                                        {
-                                            'textRun': {
-                                                'content': 'Tab content here.'
-                                            }
-                                        }
+                                "paragraph": {
+                                    "elements": [
+                                        {"textRun": {"content": "Tab content here."}}
                                     ]
                                 }
                             }
                         ]
                     }
-                }
+                },
             }
-        ]
+        ],
     }
-    
+
     get_mock.execute = execute_mock
     docs_mock.get.return_value = get_mock
-    
+
     # Mock documents().batchUpdate() chain
     batch_update_mock = Mock()
     batch_execute_mock = Mock()
-    batch_execute_mock.return_value = {'replies': []}
+    batch_execute_mock.return_value = {"replies": []}
     batch_update_mock.execute = batch_execute_mock
     docs_mock.batchUpdate.return_value = batch_update_mock
-    
+
     service.documents.return_value = docs_mock
-    
+
     return service
 
 
@@ -135,42 +131,38 @@ def mock_google_client(mock_credentials, mock_drive_service, mock_docs_service):
 def sample_document_content():
     """Sample document content for testing."""
     return {
-        'content': [
+        "content": [
             {
-                'paragraph': {
-                    'elements': [
+                "paragraph": {
+                    "elements": [
+                        {"textRun": {"content": "This is the first paragraph. "}}
+                    ]
+                }
+            },
+            {
+                "paragraph": {
+                    "elements": [
                         {
-                            'textRun': {
-                                'content': 'This is the first paragraph. '
+                            "textRun": {
+                                "content": "This is the second paragraph with more content. "
                             }
                         }
                     ]
                 }
             },
             {
-                'paragraph': {
-                    'elements': [
+                "table": {
+                    "tableRows": [
                         {
-                            'textRun': {
-                                'content': 'This is the second paragraph with more content. '
-                            }
-                        }
-                    ]
-                }
-            },
-            {
-                'table': {
-                    'tableRows': [
-                        {
-                            'tableCells': [
+                            "tableCells": [
                                 {
-                                    'content': [
+                                    "content": [
                                         {
-                                            'paragraph': {
-                                                'elements': [
+                                            "paragraph": {
+                                                "elements": [
                                                     {
-                                                        'textRun': {
-                                                            'content': 'Table cell content. '
+                                                        "textRun": {
+                                                            "content": "Table cell content. "
                                                         }
                                                     }
                                                 ]
@@ -182,6 +174,6 @@ def sample_document_content():
                         }
                     ]
                 }
-            }
+            },
         ]
     }

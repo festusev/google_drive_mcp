@@ -7,6 +7,15 @@ on:
     branches: [ main, develop ]
 
 jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - uses: pre-commit/action@v3.0.1
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -28,23 +37,17 @@ jobs:
       run: |
         uv sync --all-extras
 
-    - name: Run linting with ruff (if available)
+    - name: Run ruff linting
       run: |
-        if uv run --with ruff ruff --version > /dev/null 2>&1; then
-          uv run --with ruff ruff check .
-        else
-          echo "Ruff not available, skipping linting"
-        fi
-      continue-on-error: true
+        uv run ruff check .
 
-    - name: Run type checking with mypy (if available)
+    - name: Run ruff formatting check
       run: |
-        if uv run --with mypy mypy --version > /dev/null 2>&1; then
-          uv run --with mypy mypy google_drive_mcp --ignore-missing-imports
-        else
-          echo "MyPy not available, skipping type checking"
-        fi
-      continue-on-error: true
+        uv run ruff format --check .
+
+    - name: Run type checking with mypy
+      run: |
+        uv run mypy google_drive_mcp
 
     - name: Run tests with pytest
       run: |
@@ -76,7 +79,7 @@ jobs:
     - name: Test package installation
       run: |
         uv pip install -e .
-        
+
     - name: Test import
       run: |
         uv run python -c "import google_drive_mcp; print('Package import successful')"
