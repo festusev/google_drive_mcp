@@ -7,4 +7,23 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Google API credentials and keys
 credentials.json
+service-account-key.json
+token.json
+*.json
+!pyproject.toml
+!package.json
+!.vscode/*.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Secret keys and credentials
+*key*.json
+*secret*.json
+*credential*.json
+*auth*.json
