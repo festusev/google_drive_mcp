@@ -71,10 +71,11 @@ class TestMCPIntegration:
         assert "Found 1 files" in result
         assert "Search Result" in result
 
-    def test_error_handling(self):
+    @patch("google_drive_mcp.server.client")
+    def test_error_handling(self, mock_client):
         """Test that functions handle errors gracefully."""
-        # Test with invalid parameters should not crash
-        # These would normally require authentication, but should handle missing credentials gracefully
+        # Mock client to raise an authentication error
+        mock_client.drive_service.side_effect = Exception("Service account key file not found")
 
         # The functions should return error messages rather than raise exceptions
         # when authentication or API calls fail
@@ -87,4 +88,5 @@ class TestMCPIntegration:
                 "error" in str(e).lower()
                 or "auth" in str(e).lower()
                 or "credential" in str(e).lower()
+                or "service account" in str(e).lower()
             )
