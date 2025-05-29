@@ -94,8 +94,8 @@ read_document(document_id="your_doc_id", start_index=5000)
 ```python
 # Write to a specific tab in a document
 write_document(
-    document_id="your_doc_id", 
-    content="Hello, World!", 
+    document_id="your_doc_id",
+    content="Hello, World!",
     tab_id="your_tab_id"
 )
 ```
