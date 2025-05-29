@@ -73,8 +73,10 @@ jobs:
       with:
         version: "latest"
 
-    - name: Set up Python
-      run: uv python install 3.11
+    - name: Set up Python and create venv
+      run: |
+        uv python install 3.11
+        uv venv
 
     - name: Test package installation
       run: |
