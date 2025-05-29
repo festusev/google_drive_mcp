@@ -1,0 +1,82 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras
+
+    - name: Run linting with ruff (if available)
+      run: |
+        if uv run --with ruff ruff --version > /dev/null 2>&1; then
+          uv run --with ruff ruff check .
+        else
+          echo "Ruff not available, skipping linting"
+        fi
+      continue-on-error: true
+
+    - name: Run type checking with mypy (if available)
+      run: |
+        if uv run --with mypy mypy --version > /dev/null 2>&1; then
+          uv run --with mypy mypy google_drive_mcp --ignore-missing-imports
+        else
+          echo "MyPy not available, skipping type checking"
+        fi
+      continue-on-error: true
+
+    - name: Run tests with pytest
+      run: |
+        uv run pytest tests/ -v --cov=google_drive_mcp --cov-report=xml --cov-report=term-missing
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-package-install:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.11
+
+    - name: Test package installation
+      run: |
+        uv pip install -e .
+        
+    - name: Test import
+      run: |
+        uv run python -c "import google_drive_mcp; print('Package import successful')"
