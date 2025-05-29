@@ -75,7 +75,9 @@ class TestMCPIntegration:
     def test_error_handling(self, mock_client):
         """Test that functions handle errors gracefully."""
         # Mock client to raise an authentication error
-        mock_client.drive_service.side_effect = Exception("Service account key file not found")
+        mock_client.drive_service.side_effect = Exception(
+            "Service account key file not found"
+        )
 
         # The functions should return error messages rather than raise exceptions
         # when authentication or API calls fail

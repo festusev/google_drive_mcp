@@ -25,9 +25,7 @@ class TestGoogleDriveClient:
 
     @patch("google_drive_mcp.auth.Credentials.from_service_account_file")
     @patch("os.path.exists")
-    def test_authenticate_service_account(
-        self, mock_exists, mock_from_file
-    ):
+    def test_authenticate_service_account(self, mock_exists, mock_from_file):
         """Test authentication with service account."""
         mock_exists.return_value = True
         mock_creds = Mock()
