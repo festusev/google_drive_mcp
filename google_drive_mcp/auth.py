@@ -3,9 +3,7 @@
 import os
 from typing import Any
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 SCOPES = [
@@ -15,43 +13,25 @@ SCOPES = [
 
 
 class GoogleDriveClient:
-    """Google Drive API client with authentication."""
+    """Google Drive API client with service account authentication."""
 
-    def __init__(
-        self, credentials_path: str = "credentials.json", token_path: str = "token.json"
-    ):
+    def __init__(self, credentials_path: str = "service-account-key.json"):
         self.credentials_path = credentials_path
-        self.token_path = token_path
         self._drive_service = None
         self._docs_service = None
         self._creds = None
 
     def authenticate(self) -> bool:
-        """Authenticate with Google Drive API."""
-        creds = None
+        """Authenticate with Google Drive API using service account."""
+        if not os.path.exists(self.credentials_path):
+            raise FileNotFoundError(
+                f"Service account key file not found at {self.credentials_path}. "
+                "Please download it from Google Cloud Console."
+            )
 
-        if os.path.exists(self.token_path):
-            creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                if not os.path.exists(self.credentials_path):
-                    raise FileNotFoundError(
-                        f"Credentials file not found at {self.credentials_path}. "
-                        "Please download it from Google Cloud Console."
-                    )
-
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.credentials_path, SCOPES
-                )
-                creds = flow.run_local_server(port=0)
-
-            with open(self.token_path, "w") as token:
-                token.write(creds.to_json())
-
-        self._creds = creds
+        self._creds = Credentials.from_service_account_file(
+            self.credentials_path, scopes=SCOPES
+        )
         return True
 
     @property

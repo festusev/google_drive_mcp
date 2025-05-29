@@ -7,7 +7,7 @@ A Model Context Protocol (MCP) server for Google Drive integration, built with F
 - **File Operations**: List and search files in Google Drive with pagination
 - **Document Reading**: Read Google Docs content with pagination and tab selection
 - **Document Writing**: Write to Google Docs with tab selection and range operations
-- **Authentication**: OAuth2 flow for secure Google Drive API access
+- **Authentication**: Service account authentication for Google Drive API access
 - **Pagination**: Handle large documents and file lists efficiently
 
 ## Setup
@@ -23,16 +23,17 @@ uv sync
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
 3. Enable the Google Drive API and Google Docs API
-4. Create credentials (OAuth 2.0 Client ID) for a desktop application
-5. Download the credentials file and save it as `credentials.json` in the project root
+4. Create a service account and generate a key
+5. Download the service account key file and save it as `service-account-key.json` in the project root
+6. Share any Google Drive files/folders you want to access with the service account email
 
-### 3. First Run Authentication
+### 3. Running the Server
 
 ```bash
 python -m google_drive_mcp.server
 ```
 
-The first run will open a browser for OAuth authentication and create a `token.json` file for future use.
+No authentication flow is required - the service account will authenticate automatically using the key file.
 
 ## Available Tools
 
