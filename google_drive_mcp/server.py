@@ -209,6 +209,31 @@ def write_document(
     try:
         doc = client.docs_service.documents().get(documentId=document_id).execute()
 
+        # Get the content to calculate smart chip adjustments
+        if tab_id:
+            tabs = doc.get("tabs", [])
+            selected_tab = None
+            for tab in tabs:
+                if tab.get("tabId") == tab_id:
+                    selected_tab = tab
+                    break
+            if not selected_tab:
+                return f"Tab '{tab_id}' not found"
+            content_body = selected_tab.get("documentTab", {}).get("body", {})
+        else:
+            content_body = doc.get("body", {})
+
+        # Extract text to calculate index adjustments
+        extracted_text = _extract_text_from_content(content_body)
+
+        # Adjust indices for smart chips
+        if insert_index is not None:
+            insert_index = _adjust_index_for_smart_chips(extracted_text, insert_index)
+        if replace_start is not None:
+            replace_start = _adjust_index_for_smart_chips(extracted_text, replace_start)
+        if replace_end is not None:
+            replace_end = _adjust_index_for_smart_chips(extracted_text, replace_end)
+
         requests: list[dict[str, Any]] = []
 
         if replace_start is not None and replace_end is not None:
@@ -259,24 +284,192 @@ def write_document(
         return f"Error writing to document: {str(e)}"
 
 
-def _extract_text_from_content(content: dict[str, Any]) -> str:
-    """Extract plain text from Google Docs content structure."""
-    text_parts = []
+def _adjust_index_for_smart_chips(text: str, index: int) -> int:
+    """Adjust index to account for smart chip placeholder expansion.
 
-    def extract_from_elements(elements: list[dict[str, Any]]) -> None:
+    Smart chips appear as single Unicode characters in the document but are
+    replaced with '@[smart-chip]' (13 chars) in our extracted text. This function
+    converts from the extracted text index to the actual document index.
+    """
+    # Count smart chips before the given index
+    smart_chip_placeholder = "@[smart-chip]"
+    placeholder_len = len(smart_chip_placeholder)
+
+    # Track the actual document position
+    doc_pos = 0
+    text_pos = 0
+
+    while text_pos < index and text_pos < len(text):
+        if text[text_pos : text_pos + placeholder_len] == smart_chip_placeholder:
+            # This is a smart chip - it's only 1 character in the document
+            doc_pos += 1
+            text_pos += placeholder_len
+        else:
+            # Regular character
+            doc_pos += 1
+            text_pos += 1
+
+    return doc_pos
+
+
+def _extract_text_from_content(content: dict[str, Any]) -> str:
+    """Extract text from Google Docs content structure with formatting preserved.
+
+    Note: Smart chips (like @today, @date) appear as Unicode characters (\ue907 or \ufffc)
+    in the API response and are replaced with @[smart-chip] placeholders.
+    For full smart chip values, use Google Drive's files.export API with text/plain.
+    """
+    text_parts = []
+    list_counters: dict[str, dict[int, int]] = {}  # Track counters for numbered lists
+
+    def extract_from_elements(
+        elements: list[dict[str, Any]], indent_level: int = 0
+    ) -> None:
         for element in elements:
             if "paragraph" in element:
                 paragraph = element["paragraph"]
+                bullet = paragraph.get("bullet")
+
+                # Handle bullet points and lists
+                prefix = ""
+                if bullet:
+                    list_id = bullet.get("listId", "")
+                    nesting_level = bullet.get("nestingLevel", 0)
+
+                    # Add indentation based on nesting level
+                    indent = "  " * nesting_level
+
+                    # Check if this is an ordered (numbered) list
+                    # The bullet object doesn't directly indicate ordered vs unordered,
+                    # but we can check the list properties from the document
+                    is_ordered = False
+
+                    # For now, check if the text starts with a number pattern
+                    # In a full implementation, you'd check the list properties
+                    if list_id:
+                        if list_id not in list_counters:
+                            list_counters[list_id] = {}
+                        if nesting_level not in list_counters[list_id]:
+                            list_counters[list_id][nesting_level] = 0
+
+                        # Increment counter for this level
+                        list_counters[list_id][nesting_level] += 1
+
+                        # Reset deeper level counters
+                        for level in list(list_counters[list_id].keys()):
+                            if level > nesting_level:
+                                list_counters[list_id][level] = 0
+
+                        # Try to detect if it's ordered by checking glyph properties
+                        # This is a simplified approach - in reality you'd check list properties
+                        if any(
+                            elem.get("textRun", {})
+                            .get("content", "")
+                            .strip()
+                            .split(".")[0]
+                            .isdigit()
+                            for elem in paragraph.get("elements", [])
+                        ):
+                            is_ordered = True
+
+                    if is_ordered and list_id in list_counters:
+                        # Numbered list
+                        number = list_counters[list_id][nesting_level]
+                        prefix = f"{indent}{number}. "
+                    else:
+                        # Bullet list
+                        bullet_chars = ["•", "◦", "▪", "▫", "‣", "⁃", "⁌", "⁍", "→"]
+                        char_index = min(nesting_level, len(bullet_chars) - 1)
+                        prefix = f"{indent}{bullet_chars[char_index]} "
+
+                # Extract paragraph text
+                paragraph_text = []
                 for elem in paragraph.get("elements", []):
                     if "textRun" in elem:
-                        text_parts.append(elem["textRun"].get("content", ""))
+                        text = elem["textRun"].get("content", "")
+                        # Handle special formatting
+                        text_style = elem["textRun"].get("textStyle", {})
+
+                        # Handle @mentions or links
+                        if text_style.get("link"):
+                            url = text_style["link"].get("url", "")
+                            if url.startswith("https://"):
+                                text = f"[{text}]({url})"
+
+                        # Handle smart chips (they appear as Unicode character \ue907)
+                        # Replace with a readable placeholder
+                        text = text.replace("\ue907", "@[smart-chip]")
+                        # Also handle the object replacement character (U+FFFC)
+                        text = text.replace("\ufffc", "@[smart-chip]")
+
+                        paragraph_text.append(text)
+                    elif "person" in elem:
+                        # Handle @mentions
+                        person = elem["person"]
+                        person_id = person.get("personId", "")
+                        # Google Docs uses special person elements for @mentions
+                        paragraph_text.append(f"@{person_id}")
+                    elif "richLink" in elem:
+                        # Handle rich links
+                        rich_link = elem["richLink"]
+                        url = rich_link.get("richLinkProperties", {}).get("uri", "")
+                        title = rich_link.get("richLinkProperties", {}).get(
+                            "title", url
+                        )
+                        paragraph_text.append(f"[{title}]({url})")
+                    elif "inlineObjectElement" in elem:
+                        # Handle inline objects (images, drawings, etc.)
+                        inline_obj = elem["inlineObjectElement"]
+                        obj_id = inline_obj.get("inlineObjectId", "")
+                        paragraph_text.append(f"[INLINE_OBJECT:{obj_id}]")
+                    elif "equation" in elem:
+                        # Handle equations
+                        paragraph_text.append("[EQUATION]")
+                    elif "footnoteReference" in elem:
+                        # Handle footnotes
+                        footnote = elem["footnoteReference"]
+                        footnote_id = footnote.get("footnoteId", "")
+                        paragraph_text.append(f"[^{footnote_id}]")
+
+                # Combine prefix and text
+                full_text = prefix + "".join(paragraph_text)
+                text_parts.append(full_text)
+
             elif "table" in element:
                 table = element["table"]
-                for row in table.get("tableRows", []):
+                text_parts.append("\n[TABLE]\n")
+                for _i, row in enumerate(table.get("tableRows", [])):
+                    row_texts = []
                     for cell in row.get("tableCells", []):
-                        extract_from_elements(cell.get("content", []))
+                        # Extract cell content separately
+                        cell_content_parts = []
+                        for cell_element in cell.get("content", []):
+                            if "paragraph" in cell_element:
+                                cell_paragraph = cell_element["paragraph"]
+                                for elem in cell_paragraph.get("elements", []):
+                                    if "textRun" in elem:
+                                        cell_content_parts.append(
+                                            elem["textRun"].get("content", "")
+                                        )
+                        cell_text = "".join(cell_content_parts).strip()
+                        row_texts.append(cell_text)
+                    text_parts.append(" | ".join(row_texts) + "\n")
+                text_parts.append("[/TABLE]\n")
+
+            elif "tableOfContents" in element:
+                toc = element["tableOfContents"]
+                text_parts.append("\n[TABLE OF CONTENTS]\n")
+                extract_from_elements(toc.get("content", []), indent_level)
+                text_parts.append("[/TABLE OF CONTENTS]\n")
+
             elif "sectionBreak" in element:
-                text_parts.append("\n")
+                text_parts.append("\n---\n")
+
+            elif "pageBreak" in element:
+                text_parts.append("\n[PAGE BREAK]\n")
+
+            elif "horizontalRule" in element:
+                text_parts.append("\n___\n")
 
     extract_from_elements(content.get("content", []))
     return "".join(text_parts)
