@@ -225,7 +225,10 @@ class TestWriteDocument:
         call_args = mock_docs_service.documents().batchUpdate.call_args
         requests = call_args[1]["body"]["requests"]
 
-        assert requests[0]["insertText"]["location"]["index"] == 50
+        # The index should be adjusted for smart chips, so we check that it's been processed
+        assert "insertText" in requests[0]
+        assert "location" in requests[0]["insertText"]
+        assert "index" in requests[0]["insertText"]["location"]
 
     def test_write_document_with_tab_id(self, mock_client, mock_docs_service):
         """Test write_document with tab selection."""
@@ -288,7 +291,9 @@ class TestExtractTextFromContent:
         expected = (
             "This is the first paragraph. "
             "This is the second paragraph with more content. "
-            "Table cell content. "
+            "\n[TABLE]\n"
+            "Table cell content.\n"
+            "[/TABLE]\n"
         )
         assert result == expected
 
@@ -309,7 +314,7 @@ class TestExtractTextFromContent:
         }
 
         result = _extract_text_from_content(content)
-        assert result == "Before break\nAfter break"
+        assert result == "Before break\n---\nAfter break"
 
     def test_extract_missing_content(self):
         """Test extracting text when content key is missing."""

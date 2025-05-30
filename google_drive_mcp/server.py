@@ -441,12 +441,18 @@ def _extract_text_from_content(content: dict[str, Any]) -> str:
                 for _i, row in enumerate(table.get("tableRows", [])):
                     row_texts = []
                     for cell in row.get("tableCells", []):
-                        # Extract cell content into a temporary list
-                        temp_text_parts = text_parts[:]
-                        extract_from_elements(cell.get("content", []), indent_level + 1)
-                        # Get only the new content added for this cell
-                        cell_text = "".join(text_parts[len(temp_text_parts) :])
-                        row_texts.append(cell_text.strip())
+                        # Extract cell content separately
+                        cell_content_parts = []
+                        for cell_element in cell.get("content", []):
+                            if "paragraph" in cell_element:
+                                cell_paragraph = cell_element["paragraph"]
+                                for elem in cell_paragraph.get("elements", []):
+                                    if "textRun" in elem:
+                                        cell_content_parts.append(
+                                            elem["textRun"].get("content", "")
+                                        )
+                        cell_text = "".join(cell_content_parts).strip()
+                        row_texts.append(cell_text)
                     text_parts.append(" | ".join(row_texts) + "\n")
                 text_parts.append("[/TABLE]\n")
 
